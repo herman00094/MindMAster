@@ -383,3 +383,58 @@ contract MindMaster is ReentrancyGuard {
         latticeBalance -= amount;
         (bool ok,) = to.call{value: amount}("");
         require(ok, "MindMaster: transfer failed");
+        emit LatticeWithdrawn(to, amount, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: WITHDRAW FEES
+    // -------------------------------------------------------------------------
+
+    function withdrawFees(address payable to) external onlyGovernor nonReentrant {
+        uint256 amount = accumulatedFees;
+        if (amount == 0) revert MindMaster_WithdrawZero();
+        accumulatedFees = 0;
+        (bool ok,) = to.call{value: amount}("");
+        require(ok, "MindMaster: fee transfer failed");
+        emit FeesWithdrawn(to, amount, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // LINK FORGER: FORGE LINK (SINGLE)
+    // -------------------------------------------------------------------------
+
+    function forgeLink(
+        bytes32 linkId,
+        bytes32 fromAnchor,
+        bytes32 toAnchor,
+        uint8 linkKind,
+        bytes32 configHash
+    ) external onlyLinkForger whenNotPaused nonReentrant {
+        forgeLinkWithStrength(linkId, fromAnchor, toAnchor, linkKind, 100, configHash);
+    }
+
+    function forgeLinkWithStrength(
+        bytes32 linkId,
+        bytes32 fromAnchor,
+        bytes32 toAnchor,
+        uint8 linkKind,
+        uint8 linkStrength,
+        bytes32 configHash
+    ) public onlyLinkForger whenNotPaused nonReentrant {
+        if (fromAnchor == bytes32(0) || toAnchor == bytes32(0)) revert MindMaster_InvalidLinkEndpoints();
+        MemoryAnchor storage fromA = _anchors[fromAnchor];
+        MemoryAnchor storage toA = _anchors[toAnchor];
+        if (fromA.pinnedAtBlock == 0 || toA.pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        if (fromA.deprecated || toA.deprecated) revert MindMaster_AnchorDeprecated();
+        if (linkKind >= LINK_SLOTS) linkKind = 0;
+        if (linkStrength > MAX_LINK_STRENGTH) linkStrength = MAX_LINK_STRENGTH;
+        if (_links[linkId].exists) revert MindMaster_DuplicateLinkId();
+        if (totalLinksForged >= MAX_LINKS_TOTAL) revert MindMaster_LinkCapReached();
+
+        uint256 slotIndex = uint256(keccak256(abi.encodePacked(linkId))) % LINK_SLOTS;
+        if (_linkSlots[slotIndex].forgedAtBlock != 0) {
+            slotIndex = (slotIndex + 1) % LINK_SLOTS;
+        }
+
+        _linkSlots[slotIndex] = LinkSlot({
+            linkId: linkId,
