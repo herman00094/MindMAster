@@ -933,3 +933,58 @@ contract MindMaster is ReentrancyGuard {
         view
         returns (LatticeSnapshot memory snapshot)
     {
+        snapshot.stats = LatticeStats({
+            totalAnchors: _anchorIdList.length,
+            totalLinks: _linkIdList.length,
+            currentEpoch: currentSynapseEpoch,
+            genesisBlock: genesisBlock,
+            balance: latticeBalance,
+            accumulatedFees: accumulatedFees,
+            isPaused: paused
+        });
+        uint256 na = _anchorIdList.length;
+        uint256 nl = _linkIdList.length;
+        if (maxAnchors > na) maxAnchors = na;
+        if (maxLinks > nl) maxLinks = nl;
+        snapshot.anchorIds = new bytes32[](maxAnchors);
+        snapshot.linkIds = new bytes32[](maxLinks);
+        for (uint256 i = 0; i < maxAnchors; i++) snapshot.anchorIds[i] = _anchorIdList[i];
+        for (uint256 i = 0; i < maxLinks; i++) snapshot.linkIds[i] = _linkIdList[i];
+        snapshot.blockNumber = block.number;
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: RECALL / CONTENT HELPERS
+    // -------------------------------------------------------------------------
+
+    function getAnchorContentHash(bytes32 anchorId) external view returns (bytes32) {
+        return _anchors[anchorId].contentHash;
+    }
+
+    function getAnchorTags(bytes32 anchorId) external view returns (bytes32[4] memory) {
+        if (_anchors[anchorId].pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        return _anchors[anchorId].tags;
+    }
+
+    function isAnchorDeprecated(bytes32 anchorId) external view returns (bool) {
+        return _anchors[anchorId].deprecated;
+    }
+
+    function hasRecall(bytes32 anchorId) external view returns (bool) {
+        return _anchors[anchorId].recallStored;
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: CONFIG / CONSTANTS EXPOSED FOR FRONTS
+    // -------------------------------------------------------------------------
+
+    function getLatticeDomain() external pure returns (bytes32) {
+        return LATTICE_DOMAIN;
+    }
+
+    function getMaxBatchPin() external pure returns (uint256) {
+        return MAX_BATCH_PIN;
+    }
+
+    function getMaxBatchLink() external pure returns (uint256) {
+        return MAX_BATCH_LINK;
