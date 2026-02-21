@@ -823,3 +823,58 @@ contract MindMaster is ReentrancyGuard {
                 deprecateds[i] = a.deprecated;
             }
         }
+    }
+
+    /// @notice Fetch multiple links by id; skips missing.
+    function getLinksBatch(bytes32[] calldata linkIds)
+        external
+        view
+        returns (
+            bytes32[] memory fromAnchors,
+            bytes32[] memory toAnchors,
+            uint8[] memory linkKinds,
+            uint8[] memory linkStrengths,
+            uint256[] memory forgedAtBlocks
+        )
+    {
+        uint256 n = linkIds.length;
+        fromAnchors = new bytes32[](n);
+        toAnchors = new bytes32[](n);
+        linkKinds = new uint8[](n);
+        linkStrengths = new uint8[](n);
+        forgedAtBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            StoredLink storage l = _links[linkIds[i]];
+            if (l.exists) {
+                fromAnchors[i] = l.fromAnchor;
+                toAnchors[i] = l.toAnchor;
+                linkKinds[i] = l.linkKind;
+                linkStrengths[i] = l.linkStrength;
+                forgedAtBlocks[i] = l.forgedAtBlock;
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: EPOCH & TIER STATS
+    // -------------------------------------------------------------------------
+
+    struct EpochInfo {
+        uint256 epoch;
+        uint256 anchorsInEpoch;
+        bool advanced;
+        uint256 blockStart;
+        uint256 blockEnd;
+    }
+
+    function getEpochInfo(uint256 epoch) external view returns (EpochInfo memory info) {
+        info.epoch = epoch;
+        info.anchorsInEpoch = _anchorsInEpoch[epoch];
+        info.advanced = _epochAdvanced[epoch];
+        info.blockStart = genesisBlock + epoch * SYNAPSE_BLOCKS;
+        info.blockEnd = genesisBlock + (epoch + 1) * SYNAPSE_BLOCKS - 1;
+    }
+
+    function getTierCounts() external view returns (uint256[8] memory counts) {
+        uint256 n = _anchorIdList.length;
+        for (uint256 i = 0; i < n; i++) {
