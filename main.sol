@@ -548,3 +548,58 @@ contract MindMaster is ReentrancyGuard {
         if (_anchors[anchorId].pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
         if (msg.value == 0) revert MindMaster_WithdrawZero();
         _recallCommitments[anchorId][msg.sender] += msg.value;
+        _totalCommitmentPerAnchor[anchorId] += msg.value;
+        if (_commitmentLockedUntilBlock[anchorId] == 0 || block.number > _commitmentLockedUntilBlock[anchorId]) {
+            _commitmentLockedUntilBlock[anchorId] = block.number + COMMITMENT_LOCK_BLOCKS;
+        }
+        latticeBalance += msg.value;
+        emit RecallCommitment(anchorId, msg.sender, msg.value, block.number);
+    }
+
+    function withdrawRecallCommitment(bytes32 anchorId) external nonReentrant {
+        if (anchorId == bytes32(0)) revert MindMaster_ZeroAnchorId();
+        uint256 amount = _recallCommitments[anchorId][msg.sender];
+        if (amount == 0) revert MindMaster_NoCommitment();
+        if (block.number < _commitmentLockedUntilBlock[anchorId]) revert MindMaster_CommitmentLocked();
+        _recallCommitments[anchorId][msg.sender] = 0;
+        _totalCommitmentPerAnchor[anchorId] -= amount;
+        latticeBalance -= amount;
+        (bool ok,) = msg.sender.call{value: amount}("");
+        require(ok, "MindMaster: commitment withdraw failed");
+        emit RecallCommitmentWithdrawn(anchorId, msg.sender, amount);
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: ANCHOR
+    // -------------------------------------------------------------------------
+
+    function getAnchor(bytes32 anchorId) external view returns (
+        bytes32 id,
+        address pinnedBy,
+        uint8 recallTier,
+        uint256 synapseEpoch,
+        uint256 pinnedAtBlock,
+        bytes32 contentHash,
+        bool recallStored
+    ) {
+        MemoryAnchor storage a = _anchors[anchorId];
+        if (a.pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        return (
+            a.anchorId,
+            a.pinnedBy,
+            a.recallTier,
+            a.synapseEpoch,
+            a.pinnedAtBlock,
+            a.contentHash,
+            a.recallStored
+        );
+    }
+
+    function getAnchorFull(bytes32 anchorId) external view returns (
+        bytes32 id,
+        address pinnedBy,
+        uint8 recallTier,
+        uint256 synapseEpoch,
+        uint256 pinnedAtBlock,
+        uint256 updatedAtBlock,
+        bytes32 contentHash,
