@@ -603,3 +603,58 @@ contract MindMaster is ReentrancyGuard {
         uint256 pinnedAtBlock,
         uint256 updatedAtBlock,
         bytes32 contentHash,
+        bytes32[4] memory tags,
+        bool recallStored,
+        bool deprecated,
+        uint256 outLinkCount,
+        uint256 inLinkCount
+    ) {
+        MemoryAnchor storage a = _anchors[anchorId];
+        if (a.pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        return (
+            a.anchorId,
+            a.pinnedBy,
+            a.recallTier,
+            a.synapseEpoch,
+            a.pinnedAtBlock,
+            a.updatedAtBlock,
+            a.contentHash,
+            a.tags,
+            a.recallStored,
+            a.deprecated,
+            _outLinkIds[anchorId].length,
+            _inLinkIds[anchorId].length
+        );
+    }
+
+    function getRecallHash(bytes32 anchorId) external view returns (bytes32) {
+        return _recallHashes[anchorId];
+    }
+
+    function getRecallCommitment(bytes32 anchorId, address account) external view returns (uint256) {
+        return _recallCommitments[anchorId][account];
+    }
+
+    function commitmentLockedUntil(bytes32 anchorId) external view returns (uint256) {
+        return _commitmentLockedUntilBlock[anchorId];
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: LINKS
+    // -------------------------------------------------------------------------
+
+    function getLink(bytes32 linkId) external view returns (
+        bytes32 id,
+        bytes32 fromAnchor,
+        bytes32 toAnchor,
+        uint8 linkKind,
+        uint8 linkStrength,
+        uint256 forgedAtBlock,
+        bytes32 configHash
+    ) {
+        StoredLink storage l = _links[linkId];
+        if (!l.exists) revert MindMaster_LinkNotFound();
+        return (
+            l.linkId,
+            l.fromAnchor,
+            l.toAnchor,
