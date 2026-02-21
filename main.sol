@@ -1043,3 +1043,58 @@ contract MindMaster is ReentrancyGuard {
     function anchorsWithRecallCount() external view returns (uint256 count) {
         uint256 n = _anchorIdList.length;
         for (uint256 i = 0; i < n; i++) {
+            if (_anchors[_anchorIdList[i]].recallStored) count++;
+        }
+    }
+
+    /// @notice Returns the number of deprecated anchors.
+    function deprecatedAnchorsCount() external view returns (uint256 count) {
+        uint256 n = _anchorIdList.length;
+        for (uint256 i = 0; i < n; i++) {
+            if (_anchors[_anchorIdList[i]].deprecated) count++;
+        }
+    }
+
+    /// @notice Check if both anchors exist and a link from -> to exists (any link).
+    function hasLinkBetween(bytes32 fromAnchor, bytes32 toAnchor) external view returns (bool) {
+        bytes32[] storage outIds = _outLinkIds[fromAnchor];
+        for (uint256 i = 0; i < outIds.length; i++) {
+            if (_links[outIds[i]].toAnchor == toAnchor) return true;
+        }
+        return false;
+    }
+
+    /// @notice Get link id between two anchors (first match); returns bytes32(0) if none.
+    function getLinkBetween(bytes32 fromAnchor, bytes32 toAnchor) external view returns (bytes32 linkId) {
+        bytes32[] storage outIds = _outLinkIds[fromAnchor];
+        for (uint256 i = 0; i < outIds.length; i++) {
+            if (_links[outIds[i]].toAnchor == toAnchor) return outIds[i];
+        }
+        return bytes32(0);
+    }
+
+    /// @notice Sum of all link strengths for links originating from an anchor.
+    function outboundStrength(bytes32 anchorId) external view returns (uint256 sum) {
+        bytes32[] storage outIds = _outLinkIds[anchorId];
+        for (uint256 i = 0; i < outIds.length; i++) {
+            sum += _links[outIds[i]].linkStrength;
+        }
+    }
+
+    /// @notice Sum of all link strengths for links pointing to an anchor.
+    function inboundStrength(bytes32 anchorId) external view returns (uint256 sum) {
+        bytes32[] storage inIds = _inLinkIds[anchorId];
+        for (uint256 i = 0; i < inIds.length; i++) {
+            sum += _links[inIds[i]].linkStrength;
+        }
+    }
+
+    /// @notice Block number at which the given epoch starts.
+    function epochBlockStart(uint256 epoch) external view returns (uint256) {
+        return genesisBlock + epoch * SYNAPSE_BLOCKS;
+    }
+
+    /// @notice Block number at which the given epoch ends (inclusive range end).
+    function epochBlockEnd(uint256 epoch) external view returns (uint256) {
+        return genesisBlock + (epoch + 1) * SYNAPSE_BLOCKS - 1;
+    }
