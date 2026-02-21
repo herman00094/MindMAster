@@ -108,3 +108,58 @@ contract MindMaster is ReentrancyGuard {
     uint256 public constant MAX_BATCH_PIN = 64;
     uint256 public constant MAX_BATCH_LINK = 48;
     uint256 public constant MAX_LINKS_TOTAL = 4096;
+    uint256 public constant MAX_TAGS_PER_ANCHOR = 4;
+    uint256 public constant MAX_RECALL_TIER = 7;
+    uint256 public constant MAX_LINK_STRENGTH = 100;
+    uint256 public constant COMMITMENT_LOCK_BLOCKS = 128;
+    uint256 public constant BASIS_DENOMINATOR = 10_000;
+    uint256 public constant FEE_BASIS_POINTS = 25; // 0.25% of topLattice optional
+    bytes32 public constant LATTICE_DOMAIN =
+        bytes32(uint256(0x8f7e6d5c4b3a2918e0d1c2b3a495867e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b));
+
+    // -------------------------------------------------------------------------
+    // IMMUTABLE STATE
+    // -------------------------------------------------------------------------
+
+    address public immutable governor;
+    address public immutable linkForger;
+    address public immutable nodeOracle;
+    address public immutable feeRecipient;
+    uint256 public immutable genesisBlock;
+    bytes32 public immutable latticeSeed;
+
+    // -------------------------------------------------------------------------
+    // MUTABLE STATE
+    // -------------------------------------------------------------------------
+
+    bool public paused;
+    uint256 public currentSynapseEpoch;
+    uint256 public totalAnchorsPinned;
+    uint256 public totalLinksForged;
+    uint256 public latticeBalance;
+    uint256 public accumulatedFees;
+    mapping(uint256 => uint256) private _anchorsInEpoch;
+    mapping(bytes32 => MemoryAnchor) private _anchors;
+    mapping(bytes32 => bytes32) private _recallHashes;
+    bytes32[] private _anchorIdList;
+    mapping(uint256 => LinkSlot) private _linkSlots;
+    mapping(uint256 => bool) private _epochAdvanced;
+    mapping(bytes32 => StoredLink) private _links;
+    mapping(bytes32 => bytes32[]) private _outLinkIds;
+    mapping(bytes32 => bytes32[]) private _inLinkIds;
+    bytes32[] private _linkIdList;
+    mapping(bytes32 => mapping(address => uint256)) private _recallCommitments;
+    mapping(bytes32 => uint256) private _commitmentLockedUntilBlock;
+    mapping(bytes32 => uint256) private _totalCommitmentPerAnchor;
+
+    // -------------------------------------------------------------------------
+    // STRUCTS
+    // -------------------------------------------------------------------------
+
+    struct MemoryAnchor {
+        bytes32 anchorId;
+        address pinnedBy;
+        uint8 recallTier;
+        uint256 synapseEpoch;
+        uint256 pinnedAtBlock;
+        uint256 updatedAtBlock;
