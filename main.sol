@@ -438,3 +438,58 @@ contract MindMaster is ReentrancyGuard {
 
         _linkSlots[slotIndex] = LinkSlot({
             linkId: linkId,
+            slotIndex: uint8(slotIndex),
+            forgedAtBlock: block.number,
+            configHash: configHash
+        });
+
+        _links[linkId] = StoredLink({
+            linkId: linkId,
+            fromAnchor: fromAnchor,
+            toAnchor: toAnchor,
+            linkKind: linkKind,
+            linkStrength: linkStrength,
+            forgedAtBlock: block.number,
+            configHash: configHash,
+            exists: true
+        });
+        _linkIdList.push(linkId);
+        _outLinkIds[fromAnchor].push(linkId);
+        _inLinkIds[toAnchor].push(linkId);
+        totalLinksForged += 1;
+
+        emit LinkForged(linkId, fromAnchor, toAnchor, linkKind, linkStrength, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // LINK FORGER: BATCH FORGE
+    // -------------------------------------------------------------------------
+
+    function forgeLinksBatch(
+        bytes32[] calldata linkIds,
+        bytes32[] calldata fromAnchors,
+        bytes32[] calldata toAnchors,
+        uint8[] calldata linkKinds,
+        bytes32[] calldata configHashes
+    ) external onlyLinkForger whenNotPaused nonReentrant {
+        if (linkIds.length == 0) revert MindMaster_ZeroLength();
+        if (linkIds.length > MAX_BATCH_LINK) revert MindMaster_BatchTooLarge();
+        if (
+            linkIds.length != fromAnchors.length ||
+            linkIds.length != toAnchors.length ||
+            linkIds.length != linkKinds.length ||
+            linkIds.length != configHashes.length
+        ) revert MindMaster_ArrayLengthMismatch();
+
+        for (uint256 i = 0; i < linkIds.length; i++) {
+            forgeLinkWithStrength(linkIds[i], fromAnchors[i], toAnchors[i], linkKinds[i], 100, configHashes[i]);
+        }
+        emit LinkForgedBatch(linkIds, msg.sender, linkIds.length);
+    }
+
+    // -------------------------------------------------------------------------
+    // NODE ORACLE: ADVANCE SYNAPSE
+    // -------------------------------------------------------------------------
+
+    function advanceSynapse() external onlyNodeOracle nonReentrant {
+        if (block.number < genesisBlock + (currentSynapseEpoch + 1) * SYNAPSE_BLOCKS) {
