@@ -328,3 +328,58 @@ contract MindMaster is ReentrancyGuard {
     // -------------------------------------------------------------------------
     // GOVERNOR: BATCH PIN
     // -------------------------------------------------------------------------
+
+    function pinAnchorsBatch(
+        bytes32[] calldata anchorIds,
+        uint8[] calldata recallTiers,
+        bytes32[] calldata contentHashes
+    ) external onlyGovernor whenNotPaused nonReentrant {
+        if (anchorIds.length == 0) revert MindMaster_ZeroLength();
+        if (anchorIds.length > MAX_BATCH_PIN) revert MindMaster_BatchTooLarge();
+        if (anchorIds.length != recallTiers.length || anchorIds.length != contentHashes.length) {
+            revert MindMaster_ArrayLengthMismatch();
+        }
+        bytes32[] memory emptyTags = new bytes32[](0);
+        for (uint256 i = 0; i < anchorIds.length; i++) {
+            _pinOne(anchorIds[i], recallTiers[i], contentHashes[i], emptyTags);
+        }
+        emit AnchorPinnedBatch(anchorIds, msg.sender, currentSynapseEpoch);
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: UPDATE ANCHOR
+    // -------------------------------------------------------------------------
+
+    function updateAnchorContent(bytes32 anchorId, bytes32 newContentHash) external onlyGovernor whenNotPaused nonReentrant {
+        if (anchorId == bytes32(0)) revert MindMaster_ZeroAnchorId();
+        MemoryAnchor storage a = _anchors[anchorId];
+        if (a.pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        if (a.deprecated) revert MindMaster_AnchorDeprecated();
+        bytes32 prev = a.contentHash;
+        a.contentHash = newContentHash;
+        a.updatedAtBlock = block.number;
+        emit AnchorUpdated(anchorId, prev, newContentHash, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: DEPRECATE ANCHOR
+    // -------------------------------------------------------------------------
+
+    function setAnchorDeprecated(bytes32 anchorId) external onlyGovernor whenNotPaused nonReentrant {
+        if (anchorId == bytes32(0)) revert MindMaster_ZeroAnchorId();
+        MemoryAnchor storage a = _anchors[anchorId];
+        if (a.pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        a.deprecated = true;
+        emit AnchorDeprecated(anchorId, msg.sender, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: WITHDRAW LATTICE
+    // -------------------------------------------------------------------------
+
+    function withdrawLattice(address payable to, uint256 amount) external onlyGovernor nonReentrant {
+        if (amount == 0) revert MindMaster_WithdrawZero();
+        if (amount > latticeBalance) amount = latticeBalance;
+        latticeBalance -= amount;
+        (bool ok,) = to.call{value: amount}("");
+        require(ok, "MindMaster: transfer failed");
