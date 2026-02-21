@@ -273,3 +273,58 @@ contract MindMaster is ReentrancyGuard {
         external
         onlyGovernor
         whenNotPaused
+        nonReentrant
+    {
+        _pinOne(anchorId, recallTier, contentHash, new bytes32[](0));
+    }
+
+    function pinAnchorWithTags(
+        bytes32 anchorId,
+        uint8 recallTier,
+        bytes32 contentHash,
+        bytes32[4] calldata tags
+    ) external onlyGovernor whenNotPaused nonReentrant {
+        bytes32[] memory tagList = new bytes32[](MAX_TAGS_PER_ANCHOR);
+        for (uint256 i = 0; i < MAX_TAGS_PER_ANCHOR; i++) tagList[i] = tags[i];
+        _pinOne(anchorId, recallTier, contentHash, tagList);
+    }
+
+    function _pinOne(
+        bytes32 anchorId,
+        uint8 recallTier,
+        bytes32 contentHash,
+        bytes32[] memory tags
+    ) internal {
+        if (anchorId == bytes32(0)) revert MindMaster_ZeroAnchorId();
+        if (_anchors[anchorId].pinnedAtBlock != 0) revert MindMaster_DuplicateAnchorId();
+        if (_anchorsInEpoch[currentSynapseEpoch] >= ANCHORS_PER_EPOCH) revert MindMaster_AnchorSlotFull();
+        if (recallTier > MAX_RECALL_TIER) recallTier = 0;
+
+        _anchorsInEpoch[currentSynapseEpoch] += 1;
+        totalAnchorsPinned += 1;
+
+        bytes32[MAX_TAGS_PER_ANCHOR] memory tagArr;
+        for (uint256 i = 0; i < tags.length && i < MAX_TAGS_PER_ANCHOR; i++) {
+            tagArr[i] = tags[i];
+        }
+
+        _anchors[anchorId] = MemoryAnchor({
+            anchorId: anchorId,
+            pinnedBy: msg.sender,
+            recallTier: recallTier,
+            synapseEpoch: currentSynapseEpoch,
+            pinnedAtBlock: block.number,
+            updatedAtBlock: block.number,
+            contentHash: contentHash,
+            tags: tagArr,
+            recallStored: false,
+            deprecated: false
+        });
+        _anchorIdList.push(anchorId);
+
+        emit AnchorPinned(anchorId, msg.sender, recallTier, currentSynapseEpoch, contentHash);
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: BATCH PIN
+    // -------------------------------------------------------------------------
