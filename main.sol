@@ -713,3 +713,58 @@ contract MindMaster is ReentrancyGuard {
         }
     }
 
+    function anchorsInEpoch(uint256 epoch) external view returns (uint256) {
+        return _anchorsInEpoch[epoch];
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: LATTICE STATS
+    // -------------------------------------------------------------------------
+
+    function getLatticeStats() external view returns (LatticeStats memory stats) {
+        stats = LatticeStats({
+            totalAnchors: _anchorIdList.length,
+            totalLinks: _linkIdList.length,
+            currentEpoch: currentSynapseEpoch,
+            genesisBlock: genesisBlock,
+            balance: latticeBalance,
+            accumulatedFees: accumulatedFees,
+            isPaused: paused
+        });
+    }
+
+    function getAnchorsByEpoch(uint256 epoch) external view returns (bytes32[] memory anchorIds) {
+        uint256 n = _anchorIdList.length;
+        uint256 count = 0;
+        for (uint256 i = 0; i < n; i++) {
+            if (_anchors[_anchorIdList[i]].synapseEpoch == epoch) count++;
+        }
+        anchorIds = new bytes32[](count);
+        count = 0;
+        for (uint256 i = 0; i < n; i++) {
+            if (_anchors[_anchorIdList[i]].synapseEpoch == epoch) {
+                anchorIds[count] = _anchorIdList[i];
+                count++;
+            }
+        }
+    }
+
+    function getAnchorIdsByTier(uint8 tier) external view returns (bytes32[] memory anchorIds) {
+        if (tier > MAX_RECALL_TIER) return new bytes32[](0);
+        uint256 n = _anchorIdList.length;
+        uint256 count = 0;
+        for (uint256 i = 0; i < n; i++) {
+            if (_anchors[_anchorIdList[i]].recallTier == tier) count++;
+        }
+        anchorIds = new bytes32[](count);
+        count = 0;
+        for (uint256 i = 0; i < n; i++) {
+            if (_anchors[_anchorIdList[i]].recallTier == tier) {
+                anchorIds[count] = _anchorIdList[i];
+                count++;
+            }
+        }
+    }
+
+    function anchorExists(bytes32 anchorId) external view returns (bool) {
+        return _anchors[anchorId].pinnedAtBlock != 0;
