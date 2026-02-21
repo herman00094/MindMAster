@@ -163,3 +163,58 @@ contract MindMaster is ReentrancyGuard {
         uint256 synapseEpoch;
         uint256 pinnedAtBlock;
         uint256 updatedAtBlock;
+        bytes32 contentHash;
+        bytes32[MAX_TAGS_PER_ANCHOR] tags;
+        bool recallStored;
+        bool deprecated;
+    }
+
+    struct LinkSlot {
+        bytes32 linkId;
+        uint8 slotIndex;
+        uint256 forgedAtBlock;
+        bytes32 configHash;
+    }
+
+    struct StoredLink {
+        bytes32 linkId;
+        bytes32 fromAnchor;
+        bytes32 toAnchor;
+        uint8 linkKind;
+        uint8 linkStrength;
+        uint256 forgedAtBlock;
+        bytes32 configHash;
+        bool exists;
+    }
+
+    struct LatticeStats {
+        uint256 totalAnchors;
+        uint256 totalLinks;
+        uint256 currentEpoch;
+        uint256 genesisBlock;
+        uint256 balance;
+        uint256 accumulatedFees;
+        bool isPaused;
+    }
+
+    struct AnchorView {
+        bytes32 anchorId;
+        address pinnedBy;
+        uint8 recallTier;
+        uint256 synapseEpoch;
+        uint256 pinnedAtBlock;
+        uint256 updatedAtBlock;
+        bytes32 contentHash;
+        bytes32[MAX_TAGS_PER_ANCHOR] tags;
+        bool recallStored;
+        bool deprecated;
+        uint256 outLinkCount;
+        uint256 inLinkCount;
+    }
+
+    // -------------------------------------------------------------------------
+    // MODIFIERS
+    // -------------------------------------------------------------------------
+
+    modifier onlyGovernor() {
+        if (msg.sender != governor) revert MindMaster_NotGovernor();
