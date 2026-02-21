@@ -878,3 +878,58 @@ contract MindMaster is ReentrancyGuard {
     function getTierCounts() external view returns (uint256[8] memory counts) {
         uint256 n = _anchorIdList.length;
         for (uint256 i = 0; i < n; i++) {
+            uint8 t = _anchors[_anchorIdList[i]].recallTier;
+            if (t <= MAX_RECALL_TIER) counts[t]++;
+        }
+    }
+
+    /// @notice Anchors that have a given tag in any of the four tag slots.
+    function getAnchorIdsWithTag(bytes32 tag) external view returns (bytes32[] memory anchorIds) {
+        uint256 n = _anchorIdList.length;
+        uint256 count = 0;
+        for (uint256 i = 0; i < n; i++) {
+            bytes32 id = _anchorIdList[i];
+            MemoryAnchor storage a = _anchors[id];
+            for (uint256 j = 0; j < MAX_TAGS_PER_ANCHOR; j++) {
+                if (a.tags[j] == tag) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        anchorIds = new bytes32[](count);
+        count = 0;
+        for (uint256 i = 0; i < n; i++) {
+            bytes32 id = _anchorIdList[i];
+            MemoryAnchor storage a = _anchors[id];
+            for (uint256 j = 0; j < MAX_TAGS_PER_ANCHOR; j++) {
+                if (a.tags[j] == tag) {
+                    anchorIds[count] = id;
+                    count++;
+                    break;
+                }
+            }
+        }
+    }
+
+    /// @notice Total recall commitment (all accounts) for an anchor.
+    function totalCommitmentForAnchor(bytes32 anchorId) external view returns (uint256) {
+        return _totalCommitmentPerAnchor[anchorId];
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: LATTICE SNAPSHOT (LARGE READ FOR UIs)
+    // -------------------------------------------------------------------------
+
+    struct LatticeSnapshot {
+        LatticeStats stats;
+        bytes32[] anchorIds;
+        bytes32[] linkIds;
+        uint256 blockNumber;
+    }
+
+    function getLatticeSnapshot(uint256 maxAnchors, uint256 maxLinks)
+        external
+        view
+        returns (LatticeSnapshot memory snapshot)
+    {
