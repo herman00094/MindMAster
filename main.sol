@@ -988,3 +988,58 @@ contract MindMaster is ReentrancyGuard {
 
     function getMaxBatchLink() external pure returns (uint256) {
         return MAX_BATCH_LINK;
+    }
+
+    function getMaxLinksTotal() external pure returns (uint256) {
+        return MAX_LINKS_TOTAL;
+    }
+
+    function getCommitmentLockBlocks() external pure returns (uint256) {
+        return COMMITMENT_LOCK_BLOCKS;
+    }
+
+    function getFeeBasisPoints() external pure returns (uint256) {
+        return FEE_BASIS_POINTS;
+    }
+
+    function getFeeRecipient() external view returns (address) {
+        return feeRecipient;
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: ROLE HELPERS
+    // -------------------------------------------------------------------------
+
+    function isGovernor(address account) external view returns (bool) {
+        return account == governor;
+    }
+
+    function isLinkForger(address account) external view returns (bool) {
+        return account == linkForger;
+    }
+
+    function isNodeOracle(address account) external view returns (bool) {
+        return account == nodeOracle;
+    }
+
+    function getRoles() external view returns (address _governor, address _linkForger, address _nodeOracle) {
+        return (governor, linkForger, nodeOracle);
+    }
+
+    // -------------------------------------------------------------------------
+    // RECEIVE ETHER (OPTIONAL TOP-UP)
+    // -------------------------------------------------------------------------
+
+    receive() external payable {
+        latticeBalance += msg.value;
+        emit LatticeTopped(msg.value, msg.sender, latticeBalance);
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: ADDITIONAL LATTICE QUERIES
+    // -------------------------------------------------------------------------
+
+    /// @notice Returns the number of anchors that have recall stored.
+    function anchorsWithRecallCount() external view returns (uint256 count) {
+        uint256 n = _anchorIdList.length;
+        for (uint256 i = 0; i < n; i++) {
