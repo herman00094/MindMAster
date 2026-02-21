@@ -218,3 +218,58 @@ contract MindMaster is ReentrancyGuard {
 
     modifier onlyGovernor() {
         if (msg.sender != governor) revert MindMaster_NotGovernor();
+        _;
+    }
+
+    modifier onlyLinkForger() {
+        if (msg.sender != linkForger) revert MindMaster_NotLinkForger();
+        _;
+    }
+
+    modifier onlyNodeOracle() {
+        if (msg.sender != nodeOracle) revert MindMaster_NotNodeOracle();
+        _;
+    }
+
+    modifier whenNotPaused() {
+        if (paused) revert MindMaster_Paused();
+        _;
+    }
+
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR
+    // -------------------------------------------------------------------------
+
+    constructor() {
+        governor = address(0x9B2f4A6c8E0d1F3b5a7C9e2D4f6A8c0E1b3D5a7);
+        linkForger = address(0xF1e3C5a7B9d2F4a6C8e0B1d3E5f7A9c2D4b6E8f);
+        nodeOracle = address(0x2C4e6A8c0E1b3D5f7A9c2E4b6D8f0A1c3E5a7B9);
+        feeRecipient = address(0x3D5f7A9c2E4b6D8f0A1c3E5a7B9d2F4a6C8e0B1);
+        genesisBlock = block.number;
+        latticeSeed = keccak256(abi.encodePacked(block.number, block.prevrandao, block.chainid));
+        currentSynapseEpoch = 0;
+        totalAnchorsPinned = 0;
+        totalLinksForged = 0;
+        latticeBalance = 0;
+        accumulatedFees = 0;
+        paused = false;
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: PAUSE
+    // -------------------------------------------------------------------------
+
+    function setPaused(bool _paused) external onlyGovernor {
+        paused = _paused;
+        if (_paused) emit LatticePaused(msg.sender, block.number);
+        else emit LatticeUnpaused(msg.sender, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // GOVERNOR: PIN ANCHOR (SINGLE)
+    // -------------------------------------------------------------------------
+
+    function pinAnchor(bytes32 anchorId, uint8 recallTier, bytes32 contentHash)
+        external
+        onlyGovernor
+        whenNotPaused
