@@ -768,3 +768,58 @@ contract MindMaster is ReentrancyGuard {
 
     function anchorExists(bytes32 anchorId) external view returns (bool) {
         return _anchors[anchorId].pinnedAtBlock != 0;
+    }
+
+    function linkExists(bytes32 linkId) external view returns (bool) {
+        return _links[linkId].exists;
+    }
+
+    function isEpochAdvanced(uint256 epoch) external view returns (bool) {
+        return _epochAdvanced[epoch];
+    }
+
+    function canAdvanceSynapse() external view returns (bool) {
+        if (currentSynapseEpoch >= MAX_SYNAPSE_EPOCHS) return false;
+        if (_epochAdvanced[currentSynapseEpoch]) return false;
+        return block.number >= genesisBlock + (currentSynapseEpoch + 1) * SYNAPSE_BLOCKS;
+    }
+
+    function nextSynapseBlock() external view returns (uint256) {
+        return genesisBlock + (currentSynapseEpoch + 1) * SYNAPSE_BLOCKS;
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: BATCH ANCHOR / LINK DATA
+    // -------------------------------------------------------------------------
+
+    /// @notice Fetch multiple anchors by id; skips missing (returns empty struct for missing).
+    function getAnchorsBatch(bytes32[] calldata anchorIds)
+        external
+        view
+        returns (
+            address[] memory pinnedBys,
+            uint8[] memory recallTiers,
+            uint256[] memory pinnedAtBlocks,
+            bytes32[] memory contentHashes,
+            bool[] memory recallStoreds,
+            bool[] memory deprecateds
+        )
+    {
+        uint256 n = anchorIds.length;
+        pinnedBys = new address[](n);
+        recallTiers = new uint8[](n);
+        pinnedAtBlocks = new uint256[](n);
+        contentHashes = new bytes32[](n);
+        recallStoreds = new bool[](n);
+        deprecateds = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
+            MemoryAnchor storage a = _anchors[anchorIds[i]];
+            if (a.pinnedAtBlock != 0) {
+                pinnedBys[i] = a.pinnedBy;
+                recallTiers[i] = a.recallTier;
+                pinnedAtBlocks[i] = a.pinnedAtBlock;
+                contentHashes[i] = a.contentHash;
+                recallStoreds[i] = a.recallStored;
+                deprecateds[i] = a.deprecated;
+            }
+        }
