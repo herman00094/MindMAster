@@ -493,3 +493,58 @@ contract MindMaster is ReentrancyGuard {
 
     function advanceSynapse() external onlyNodeOracle nonReentrant {
         if (block.number < genesisBlock + (currentSynapseEpoch + 1) * SYNAPSE_BLOCKS) {
+            revert MindMaster_SynapseWindowNotReached();
+        }
+        if (currentSynapseEpoch >= MAX_SYNAPSE_EPOCHS) return;
+        if (_epochAdvanced[currentSynapseEpoch]) return;
+
+        uint256 prev = currentSynapseEpoch;
+        currentSynapseEpoch += 1;
+        _epochAdvanced[prev] = true;
+
+        emit SynapseTicked(prev, currentSynapseEpoch, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // NODE ORACLE: STORE RECALL
+    // -------------------------------------------------------------------------
+
+    function storeRecall(bytes32 anchorId, bytes32 recallHash) external onlyNodeOracle nonReentrant {
+        if (anchorId == bytes32(0)) revert MindMaster_ZeroAnchorId();
+        if (recallHash == bytes32(0)) revert MindMaster_ZeroRecallHash();
+        MemoryAnchor storage a = _anchors[anchorId];
+        if (a.pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        if (a.recallStored) revert MindMaster_RecallAlreadyStored();
+
+        a.recallStored = true;
+        _recallHashes[anchorId] = recallHash;
+
+        emit RecallStored(anchorId, recallHash, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // ANYONE: TOP LATTICE (PAYABLE)
+    // -------------------------------------------------------------------------
+
+    function topLattice() external payable nonReentrant {
+        if (msg.value == 0) return;
+        uint256 fee = (msg.value * FEE_BASIS_POINTS) / BASIS_DENOMINATOR;
+        uint256 toLattice = msg.value - fee;
+        latticeBalance += toLattice;
+        if (fee > 0 && feeRecipient != address(0)) {
+            accumulatedFees += fee;
+        } else {
+            latticeBalance += fee;
+        }
+        emit LatticeTopped(msg.value, msg.sender, latticeBalance);
+    }
+
+    // -------------------------------------------------------------------------
+    // ANYONE: RECALL COMMITMENT (STAKE PER ANCHOR)
+    // -------------------------------------------------------------------------
+
+    function addRecallCommitment(bytes32 anchorId) external payable whenNotPaused nonReentrant {
+        if (anchorId == bytes32(0)) revert MindMaster_ZeroAnchorId();
+        if (_anchors[anchorId].pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        if (msg.value == 0) revert MindMaster_WithdrawZero();
+        _recallCommitments[anchorId][msg.sender] += msg.value;
