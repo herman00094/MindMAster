@@ -53,3 +53,58 @@ contract MindMaster is ReentrancyGuard {
         uint256 forgedAtBlock
     );
     event LinkForgedBatch(bytes32[] linkIds, address indexed forgedBy, uint256 count);
+    event SynapseTicked(uint256 previousEpoch, uint256 newEpoch, uint256 atBlock);
+    event RecallStored(
+        bytes32 indexed anchorId,
+        bytes32 recallHash,
+        uint256 storedAtBlock
+    );
+    event LatticeTopped(uint256 amount, address indexed from, uint256 newBalance);
+    event LatticePaused(address indexed by, uint256 atBlock);
+    event LatticeUnpaused(address indexed by, uint256 atBlock);
+    event LatticeWithdrawn(address indexed to, uint256 amount, uint256 atBlock);
+    event FeesWithdrawn(address indexed to, uint256 amount, uint256 atBlock);
+    event RecallCommitment(bytes32 indexed anchorId, address indexed from, uint256 amount, uint256 atBlock);
+    event RecallCommitmentWithdrawn(bytes32 indexed anchorId, address indexed to, uint256 amount);
+
+    // -------------------------------------------------------------------------
+    // ERRORS
+    // -------------------------------------------------------------------------
+
+    error MindMaster_AnchorSlotFull();
+    error MindMaster_NotGovernor();
+    error MindMaster_SynapseWindowNotReached();
+    error MindMaster_LinkSlotInvalid();
+    error MindMaster_DuplicateAnchorId();
+    error MindMaster_AnchorNotFound();
+    error MindMaster_ZeroAnchorId();
+    error MindMaster_LinkCapReached();
+    error MindMaster_NotLinkForger();
+    error MindMaster_NotNodeOracle();
+    error MindMaster_RecallAlreadyStored();
+    error MindMaster_ZeroRecallHash();
+    error MindMaster_InvalidLinkEndpoints();
+    error MindMaster_Paused();
+    error MindMaster_AnchorDeprecated();
+    error MindMaster_BatchTooLarge();
+    error MindMaster_ZeroLength();
+    error MindMaster_WithdrawZero();
+    error MindMaster_InvalidTier();
+    error MindMaster_InvalidStrength();
+    error MindMaster_LinkNotFound();
+    error MindMaster_DuplicateLinkId();
+    error MindMaster_NoCommitment();
+    error MindMaster_CommitmentLocked();
+    error MindMaster_ArrayLengthMismatch();
+
+    // -------------------------------------------------------------------------
+    // CONSTANTS
+    // -------------------------------------------------------------------------
+
+    uint256 public constant ANCHORS_PER_EPOCH = 512;
+    uint256 public constant LINK_SLOTS = 32;
+    uint256 public constant SYNAPSE_BLOCKS = 128;
+    uint256 public constant MAX_SYNAPSE_EPOCHS = 4096;
+    uint256 public constant MAX_BATCH_PIN = 64;
+    uint256 public constant MAX_BATCH_LINK = 48;
+    uint256 public constant MAX_LINKS_TOTAL = 4096;
