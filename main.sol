@@ -658,3 +658,58 @@ contract MindMaster is ReentrancyGuard {
             l.linkId,
             l.fromAnchor,
             l.toAnchor,
+            l.linkKind,
+            l.linkStrength,
+            l.forgedAtBlock,
+            l.configHash
+        );
+    }
+
+    function getLinksFromAnchor(bytes32 anchorId) external view returns (bytes32[] memory linkIds) {
+        return _outLinkIds[anchorId];
+    }
+
+    function getLinksToAnchor(bytes32 anchorId) external view returns (bytes32[] memory linkIds) {
+        return _inLinkIds[anchorId];
+    }
+
+    function linkCount() external view returns (uint256) {
+        return _linkIdList.length;
+    }
+
+    function linkIdAt(uint256 index) external view returns (bytes32) {
+        return _linkIdList[index];
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEW: ANCHOR LIST / PAGINATION
+    // -------------------------------------------------------------------------
+
+    function anchorCount() external view returns (uint256) {
+        return _anchorIdList.length;
+    }
+
+    function anchorIdAt(uint256 index) external view returns (bytes32) {
+        return _anchorIdList[index];
+    }
+
+    function getAnchorIdRange(uint256 offset, uint256 limit) external view returns (bytes32[] memory ids) {
+        uint256 total = _anchorIdList.length;
+        if (offset >= total) return new bytes32[](0);
+        if (offset + limit > total) limit = total - offset;
+        ids = new bytes32[](limit);
+        for (uint256 i = 0; i < limit; i++) {
+            ids[i] = _anchorIdList[offset + i];
+        }
+    }
+
+    function getLinkIdRange(uint256 offset, uint256 limit) external view returns (bytes32[] memory ids) {
+        uint256 total = _linkIdList.length;
+        if (offset >= total) return new bytes32[](0);
+        if (offset + limit > total) limit = total - offset;
+        ids = new bytes32[](limit);
+        for (uint256 i = 0; i < limit; i++) {
+            ids[i] = _linkIdList[offset + i];
+        }
+    }
+
