@@ -1098,3 +1098,58 @@ contract MindMaster is ReentrancyGuard {
     function epochBlockEnd(uint256 epoch) external view returns (uint256) {
         return genesisBlock + (epoch + 1) * SYNAPSE_BLOCKS - 1;
     }
+
+    /// @notice Whether the current block is within the synapse window to advance to next epoch.
+    function inSynapseWindow() external view returns (bool) {
+        return block.number >= genesisBlock + (currentSynapseEpoch + 1) * SYNAPSE_BLOCKS;
+    }
+
+    /// @notice Lattice balance plus accumulated fees (total contract-held value).
+    function totalContractBalance() external view returns (uint256) {
+        return latticeBalance + accumulatedFees;
+    }
+
+    /// @notice Bytes32(0) sentinel for "no link".
+    function nullLinkId() external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
+    /// @notice Bytes32(0) sentinel for "no anchor".
+    function nullAnchorId() external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
+    // -------------------------------------------------------------------------
+    // PURE: CONSTANT REFERENCE VIEWS (NO SLOAD)
+    // -------------------------------------------------------------------------
+
+    function constantAnchorsPerEpoch() external pure returns (uint256) { return ANCHORS_PER_EPOCH; }
+    function constantLinkSlots() external pure returns (uint256) { return LINK_SLOTS; }
+    function constantSynapseBlocks() external pure returns (uint256) { return SYNAPSE_BLOCKS; }
+    function constantMaxSynapseEpochs() external pure returns (uint256) { return MAX_SYNAPSE_EPOCHS; }
+    function constantMaxRecallTier() external pure returns (uint256) { return MAX_RECALL_TIER; }
+    function constantMaxLinkStrength() external pure returns (uint256) { return MAX_LINK_STRENGTH; }
+    function constantMaxTagsPerAnchor() external pure returns (uint256) { return MAX_TAGS_PER_ANCHOR; }
+    function constantBasisDenominator() external pure returns (uint256) { return BASIS_DENOMINATOR; }
+
+    // -------------------------------------------------------------------------
+    // VIEW: CONVENIENCE BOOLEANS
+    // -------------------------------------------------------------------------
+
+    function canPinInCurrentEpoch() external view returns (bool) {
+        return !paused && _anchorsInEpoch[currentSynapseEpoch] < ANCHORS_PER_EPOCH;
+    }
+
+    function canForgeMoreLinks() external view returns (bool) {
+        return !paused && totalLinksForged < MAX_LINKS_TOTAL;
+    }
+
+    function hasAnchor(bytes32 anchorId) external view returns (bool) {
+        return _anchors[anchorId].pinnedAtBlock != 0;
+    }
+
+    function hasStoredRecall(bytes32 anchorId) external view returns (bool) {
+        return _anchors[anchorId].recallStored;
+    }
+
+    function getAnchorSynapseEpoch(bytes32 anchorId) external view returns (uint256) {
