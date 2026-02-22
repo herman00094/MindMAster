@@ -1153,3 +1153,47 @@ contract MindMaster is ReentrancyGuard {
     }
 
     function getAnchorSynapseEpoch(bytes32 anchorId) external view returns (uint256) {
+        if (_anchors[anchorId].pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        return _anchors[anchorId].synapseEpoch;
+    }
+
+    function getAnchorPinnedBy(bytes32 anchorId) external view returns (address) {
+        if (_anchors[anchorId].pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        return _anchors[anchorId].pinnedBy;
+    }
+
+    function getAnchorUpdatedAtBlock(bytes32 anchorId) external view returns (uint256) {
+        if (_anchors[anchorId].pinnedAtBlock == 0) revert MindMaster_AnchorNotFound();
+        return _anchors[anchorId].updatedAtBlock;
+    }
+
+    function getLinkFromAnchor(bytes32 linkId) external view returns (bytes32) {
+        if (!_links[linkId].exists) revert MindMaster_LinkNotFound();
+        return _links[linkId].fromAnchor;
+    }
+
+    function getLinkToAnchor(bytes32 linkId) external view returns (bytes32) {
+        if (!_links[linkId].exists) revert MindMaster_LinkNotFound();
+        return _links[linkId].toAnchor;
+    }
+
+    function getLinkStrength(bytes32 linkId) external view returns (uint8) {
+        if (!_links[linkId].exists) revert MindMaster_LinkNotFound();
+        return _links[linkId].linkStrength;
+    }
+
+    function getLinkForgedAtBlock(bytes32 linkId) external view returns (uint256) {
+        if (!_links[linkId].exists) revert MindMaster_LinkNotFound();
+        return _links[linkId].forgedAtBlock;
+    }
+
+    /// @notice Returns current synapse epoch (alias for public state).
+    function getCurrentEpoch() external view returns (uint256) {
+        return currentSynapseEpoch;
+    }
+
+    /// @notice Returns lattice seed (alias for immutable).
+    function getLatticeSeed() external view returns (bytes32) {
+        return latticeSeed;
+    }
+}
